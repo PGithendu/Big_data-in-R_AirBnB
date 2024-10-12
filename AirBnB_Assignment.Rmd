@@ -1,0 +1,419 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-02-28"
+---
+
+```{r}
+# Setting the working directory to where the file is located 
+setwd("C:/Users/patri/OneDrive/Documents/R")  
+
+```
+
+```{r}
+# Loading the .RData file into R session
+load("C:/Users/patri/OneDrive/Documents/R/AirBnB.RData")
+
+```
+```{r}
+file.exists("C:/Users/patri/OneDrive/Documents/R/AirBnB.RData")
+
+```
+
+```{r}
+# To view contents of the file
+ls()
+
+```
+```{r}
+# L and R are the AirBnB files after exploring all the rest
+```
+
+
+```{r}
+head(L)
+```
+```{r}
+head(R)
+```
+```{r}
+#install.packages("tidyverse")
+
+library(tidyverse)
+
+#install.packages("dplyr")
+#install.packages("tidyr")
+#install.packages("strignr")
+#install.packages("lubridate")
+#install.packages("stats")
+```
+
+
+```{r}
+library(dplyr)
+library(stats)
+library(tidyr)
+library(stringr)
+library(lubridate)
+```
+
+
+```{r}
+#join the 2 dataframes L and R "id" in df L is "listing_id" in df R
+df1 <- L %>%
+  full_join(R, by = c("id" = "listing_id"))
+head(df1)
+```
+
+
+```{r}
+nrow(L)
+```
+```{r}
+ncol(L)
+```
+```{r}
+nrow(R)
+```
+```{r}
+ncol(R)
+```
+```{r}
+# the new df has slightly more rows after full join
+
+nrow(df1)
+```
+```{r}
+ncol(df1)
+```
+
+
+```{r}
+# Get the column headers of the data frame L
+# Extract the column headers from the data frame L
+column_headers <- names(L)
+
+# Print the column headers to the console
+print(column_headers)
+
+
+```
+```{r}
+###summary(L)
+```
+
+
+```{r}
+# See the structure of the dataset
+dim(L)
+```
+
+```{r}
+##create a new data frame based on columns of interest for Relationship between prices and apartment features: 
+#install.packages(c("ggplot2", "corrplot"))
+# Load the necessary libraries for analysis and plotting subsequently
+library(corrplot)
+library(ggplot2)
+```
+
+
+```{r}
+df2 <- df1[c("id", "host_response_time", "state", "beds", "amenities", "bathrooms", "room_type", "price", "monthly_price", "cleaning_fee", "review_scores_rating", "require_guest_profile_picture", "instant_bookable", "security_deposit", "weekly_price", "square_feet", "accommodates", "latitude", "longitude", "zipcode", "neighbourhood_cleansed", "host_has_profile_pic", "city", "minimum_nights", "maximum_nights" , "host_id" , "host_name" , "reviews_per_month" , "first_review" , "last_review")]
+
+head(df2)
+
+```
+
+```{r}
+nrow(df2)
+```
+```{r}
+# conduct Exploratory Summary statistics on the data set
+get_mode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+# List of columns to clean and convert
+columns_to_convert <- c("price", "monthly_price", "cleaning_fee", "security_deposit", "weekly_price")
+
+# Loop through each column, clean, and convert to numeric
+for (col in columns_to_convert) {
+    df2[[col]] <- as.numeric(gsub("[\\$,]", "", df2[[col]]))
+}
+
+# Ensure that NA values are properly handled and calculate summary statistics
+summary_table <- df2 %>%
+  summarise(
+    Mean_Price = mean(price, na.rm = TRUE),
+    Median_Price = median(price, na.rm = TRUE),
+    Mode_Price = get_mode(price),
+    Range_Price = max(price, na.rm = TRUE) - min(price, na.rm = TRUE),
+    
+    Mean_Monthly_Price = mean(monthly_price, na.rm = TRUE),
+    Median_Monthly_Price = median(monthly_price, na.rm = TRUE),
+    Mode_Monthly_Price = get_mode(monthly_price),
+    Range_Monthly_Price = max(monthly_price, na.rm = TRUE) - min(monthly_price, na.rm = TRUE),
+    
+    Mean_Cleaning_Fee = mean(cleaning_fee, na.rm = TRUE),
+    Median_Cleaning_Fee = median(cleaning_fee, na.rm = TRUE),
+    Mode_Cleaning_Fee = get_mode(cleaning_fee),
+    Range_Cleaning_Fee = max(cleaning_fee, na.rm = TRUE) - min(cleaning_fee, na.rm = TRUE),
+    
+    Mean_Security_Deposit = mean(security_deposit, na.rm = TRUE),
+    Median_Security_Deposit = median(security_deposit, na.rm = TRUE),
+    Mode_Security_Deposit = get_mode(security_deposit),
+    Range_Security_Deposit = max(security_deposit, na.rm = TRUE) - min(security_deposit, na.rm = TRUE),
+    
+    Mean_Weekly_Price = mean(weekly_price, na.rm = TRUE),
+    Median_Weekly_Price = median(weekly_price, na.rm = TRUE),
+    Mode_Weekly_Price = get_mode(weekly_price),
+    Range_Weekly_Price = max(weekly_price, na.rm = TRUE) - min(weekly_price, na.rm = TRUE),
+    
+    Mean_Square_Feet = mean(square_feet, na.rm = TRUE),
+    Median_Square_Feet = median(square_feet, na.rm = TRUE),
+    Mode_Square_Feet = get_mode(square_feet),
+    Range_Square_Feet = max(square_feet, na.rm = TRUE) - min(square_feet, na.rm = TRUE),
+    
+    Mean_Accommodates = mean(accommodates, na.rm = TRUE),
+    Median_Accommodates = median(accommodates, na.rm = TRUE),
+    Mode_Accommodates = get_mode(accommodates),
+    Range_Accommodates = max(accommodates, na.rm = TRUE) - min(accommodates, na.rm = TRUE)
+  )
+
+# Display the summary table with the statistics calculated above
+print(summary_table)
+
+```
+```{r}
+# Selecting only the numeric columns relevant for correlation analysis to be performed 
+# Ensure all these columns are correctly formatted as numeric and contain no NA values
+numeric_data <- df2 %>% 
+  select(price, beds, bathrooms, monthly_price, cleaning_fee, security_deposit, weekly_price, square_feet, accommodates) %>%
+  na.omit()  #  This is to ensure removal of all rows with NA values
+
+# Calculate Pearson Correlation Matrix
+pearson_correlation_matrix <- cor(numeric_data, method = "pearson")
+print("Pearson Correlation Matrix:")
+print(pearson_correlation_matrix)
+
+# Calculate Spearman Correlation Matrix
+spearman_correlation_matrix <- cor(numeric_data, method = "spearman")
+print("Spearman Correlation Matrix:")
+print(spearman_correlation_matrix)
+
+```
+```{r}
+# Selecting the numeric columns for correlation analysis
+
+numeric_df <- df2 %>% select(price, monthly_price, cleaning_fee, security_deposit, weekly_price, square_feet, accommodates, beds, bathrooms)
+
+# Compute the correlation matrix & Use methods "pearson" for Pearson's correlation or "spearman" for Spearman's correlation
+corr_matrix <- cor(numeric_df, use = "complete.obs", method = "pearson") #ensures that only complete cases are used in the calculation. (observations with non-missing values for all variables being considered)
+
+# Plot the heatmap of the correlation matrix
+corrplot(corr_matrix, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45, 
+         method = "color", addCoef.col = "black", 
+         # generating the colours for the heatmap
+         col = colorRampPalette(c("#6D9EC1", "white", "#E46726"))(200))
+
+```
+> Remarks: Pearson Correlation Matrix Interpretation:
+Price Relationships: The price is strongly correlated with monthly_price (0.872) and weekly_price (0.927), indicating that listings with higher regular prices tend to have higher monthly and weekly rates. This is expected as these variables are directly related to the overall cost of renting.
+Space and Accommodation: There's a significant positive correlation between price and accommodates (0.635), beds (0.549), and bathrooms (0.572). This suggests that larger apartments (more beds, space, or bathrooms) tend to have higher rental prices.
+Cleaning Fee: The cleaning_fee shows a moderate correlation with price (0.572), suggesting that higher-priced listings may have higher cleaning fees.
+Square Feet: Square_feet is moderately correlated with price (0.554), indicating that larger apartments tend to be priced higher, which aligns with typical real estate valuation based on size.
+Spearman Correlation Matrix Interpretation:
+Price and Rental Rates: Similar to the Pearson results, price has strong correlations with monthly_price (0.856) and weekly_price (0.905), reaffirming that higher prices correlate with higher long-term rental rates.
+Cleaning Fee: The correlation between cleaning_fee and price is stronger here (0.627) compared to Pearson's, indicating that when ranking listings from cheapest to most expensive, those with higher cleaning fees generally are priced higher.
+Accommodates: The correlation between price and accommodates (0.564) is slightly lower than Pearson's but still significant, reinforcing the relationship between the capacity of an apartment and its price.
+Less Influence of Beds and Bathrooms: The Spearman correlations for beds (0.488) and bathrooms (0.353) with price are lower than Pearson's, suggesting that while there is a relationship, the rank order of prices is less directly tied to the number of beds and bathrooms compared to the linear relationship suggested by Pearson.
+Overall Deductions:
+Both correlation matrices highlight strong relationships between price and the variables related to the size and capacity of listings (e.g., accommodates, square_feet).
+The cleaning fee, security deposit, and other costs associated with renting are also correlated with price, but to varying degrees.
+The differences between Pearson and Spearman correlations suggest that while some relationships are linear (Pearson), others might be more about the rank order or non-linear relationships (Spearman).
+
+```{r}
+# Create the box plot to show price distribution by room type. using price upto 500 since the outliers are many resulting in overplotting
+ggplot(data = df2, aes(x = room_type, y = price ,fill='lavender')) +
+  geom_boxplot() +
+  labs(title = "Price Distribution by Room Type", x = "Room Type", y = "Price") +
+  theme_minimal() +
+  coord_cartesian(ylim = c(0, 500))
+```
+> Remark: As expected, renting an entire home costs more than private room and least for a shared room. There are however there are still many data points above the 75% percentile or 3rd Quartile.
+
+```{r}
+#creating a box plot comparing review scores across different price ranges. Categorizing the price into ranges (low, medium, high).
+
+# Calculate price thresholds for categories based on quartiles initially
+low_price_threshold <- quantile(df2$price, 0.33, na.rm = TRUE)
+high_price_threshold <- quantile(df2$price, 0.66, na.rm = TRUE)
+
+# then categorize price into Low, Medium, High for ease of classification
+df2 <- df2 %>%
+  mutate(price_category = case_when(
+    price <= low_price_threshold ~ "Low",
+    price > low_price_threshold & price <= high_price_threshold ~ "Medium",
+    price > high_price_threshold ~ "High",
+    TRUE ~ NA_character_  # For missing values
+  ))
+
+# Creating a box plot for visualization
+ggplot(data = df2, aes(x = price_category, y = review_scores_rating, fill='lavender')) +
+  geom_boxplot() +
+  labs(title = "Review Scores by Price Range", x = "Price Range", y = "Review Scores Rating") +
+  theme_minimal()
+
+```
+> Remark: properties with high review scores tend to be those with higher prices reflecting possibly higher standards.
+
+
+```{r}
+# To use features for showing relationship between price and other variables. Here define the dataset and features
+features <- c("beds", "bathrooms", "monthly_price", "cleaning_fee", "security_deposit", "weekly_price", "square_feet", "accommodates")
+```
+
+
+
+```{r}
+#Regression analysis of selected features of listings against price. Simple Linear Regression for each feature
+for (feature in features) {
+  formula <- as.formula(paste("price ~", feature))
+  model <- lm(formula, data = df2)
+  print(summary(model))  # Output the summary of the regression analysis
+  
+  # Plotting
+  plot <- ggplot(df2, aes_string(x = feature, y = "price")) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +
+    labs(title = paste("Linear Regression of Price on", feature), x = feature, y = "Price")
+  print(plot)  # Display the plot
+}
+
+```
+>Remarks: Bathrooms: The model suggests a significant positive relationship between the number of bathrooms and the price. For each additional bathroom, the price increases by approximately 80.94 units. This model explains about 17.98% of the variance in prices.
+
+>Monthly Price: There is a strong positive relationship between monthly price and the original listing price, with a coefficient of 0.0411. This suggests that for each unit increase in monthly price, the listing price increases by approximately the same factor. This relationship is very strong, explaining approximately 75.86% of the variance in prices.
+
+>Cleaning Fee: The cleaning fee also has a significant positive effect on the price, with an increase of about 1.97 units for each unit increase in the cleaning fee. This model accounts for 42.68% of the variance in prices.
+
+>Security Deposit: There's a positive relationship between security deposit and price, with the price increasing by approximately 0.1289 units for each unit increase in the security deposit. This model explains about 23.83% of the variance in prices.
+
+>Weekly Price: The relationship between weekly price and listing price is very strong, with the listing price increasing by about 0.1457 units for each unit increase in weekly price. This model has an extremely high R-squared value of 85.61%, indicating that weekly price is a very strong predictor of the listing price.
+
+>Square Feet: The size of the property, measured in square feet, also significantly affects the price. Each additional square foot increases the price by approximately 0.0988 units. This model explains 31.47% of the variance in prices.
+
+>Accommodates: The number of people the listing accommodates is a strong predictor of price, with each additional person accommodated increasing the price by about 27.18 units. This model explains about 34.35% of the variance in prices.
+
+>Overall Conclusions:
+Strong Predictors: Monthly price, weekly price, and the number of people accommodated are strong predictors of the listing price. The relationships here are very significant and explain a large portion of the price variance, particularly for weekly and monthly prices.
+
+>Moderate Predictors: Cleaning fee and square footage also play significant roles in determining price but to a lesser extent compared to the weekly and monthly rates.
+
+>Lesser but Significant Predictors: While bathrooms and security deposits have smaller coefficients, they still significantly affect the price, indicating that as the quality and security of an apartment increase, so does its price.
+
+>Practical Implications: For hosts or property managers, focusing on what can make listings accommodate more people or setting appropriate cleaning fees could help in optimizing listing prices. Also, for long-term rentals, setting competitive monthly or weekly prices is crucial as they strongly correlate with the listing's price.
+
+```{r}
+#To investigate the effect of location on price :Renting price per city quarter ("arrondissements"):
+
+# Average, Median Price by Neighbourhood
+price_by_neighbourhood <- df2 %>%
+  group_by(neighbourhood_cleansed) %>%
+  summarise(
+    Average_Price = mean(price, na.rm = TRUE),
+    Median_Price = median(price, na.rm = TRUE),
+    Price_Range = max(price, na.rm = TRUE) - min(price, na.rm = TRUE)
+  ) %>%
+  arrange(desc(Average_Price))
+
+# Plot
+ggplot(price_by_neighbourhood, aes(x = reorder(neighbourhood_cleansed, -Average_Price), y = Average_Price)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Average Price by Neighbourhood", x = "Neighbourhood", y = "Average Price ($)")
+
+```
+
+```{r}
+# Investigating the number of apartments per host. Selecting top 10
+apartments_per_host <- df2 %>%
+  group_by(host_id, host_name) %>%  # Assuming host_id uniquely identifies owners
+  summarise(Num_Apartments = n(), .groups = 'drop') %>%
+  arrange(desc(Num_Apartments)) %>%
+  slice_max(order_by = Num_Apartments, n = 10)  # Consistent top 10 selection
+head(apartments_per_host, 10)
+
+
+```
+
+```{r}
+nrow(apartments_per_host)
+```
+```{r}
+# Calculat the summary statistics of number of apartments per host
+apartments_per_host <- df2 %>%
+  group_by(host_id) %>%
+  summarise(num_apartments = n_distinct(id), .groups = 'drop')
+
+# Calculate mean, median
+mean_apartments = mean(apartments_per_host$num_apartments)
+median_apartments = median(apartments_per_host$num_apartments)
+
+# Calculate mode - R does not have a built-in mode function, so we create one
+get_mode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+mode_apartments = get_mode(apartments_per_host$num_apartments)
+
+# Print the results
+cat("Mean number of apartments per owner: ", mean_apartments, "\n")
+cat("Median number of apartments per owner: ", median_apartments, "\n")
+cat("Mode number of apartments per owner: ", mode_apartments, "\n")
+
+```
+> Remark: Many apartments are single owner. Not many people have multiple apartments in Paris
+
+
+
+```{r}
+#Looking at Visit frequency of the different quarters according to time
+# Add year, month, and quarter to the dataset along with a formatted year-quarter label. Using last_review as a proxy of when a listing was visited as it is assumed that a review takes place after visiting a listing. There is no column for listings visited in the dataset
+df2 <- df2 %>%
+   filter(!is.na(ymd(last_review))) %>%  # Exclude rows where last_review is NA
+  mutate(
+    year = year(ymd(last_review)),  # Extract the year from the last review date as a proxy
+    quarter = quarter(ymd(last_review)),  # Extract the quarter from the last review date
+    year_quarter = paste(year, "Q", quarter, sep="")  # Create a formatted year-quarter string
+  ) %>%
+  group_by(year, quarter, year_quarter) %>%
+  summarise(
+    average_reviews_per_month = mean(reviews_per_month, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+
+# Display the summarized table
+print(df2)
+
+
+```
+```{r}
+# Plotting the trend over time 
+ggplot(df2, aes(x = year_quarter, y = average_reviews_per_month)) +
+  geom_line(group = 1) +  
+  geom_point() +  
+  labs(title = "Average Reviews Per Month Over Time",
+       x = "Year and Quarter",
+       y = "Average Reviews per Month") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x labels for better readability
+
+```
+
+
+
+
